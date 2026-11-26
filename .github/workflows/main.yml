@@ -53,6 +53,8 @@ jobs:
           haxelib run lime setup android
 
       - name: Build debug APK
+        env:
+          GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx4g
         run: haxelib run lime build android -debug
 
       - name: Stage APK artifact
