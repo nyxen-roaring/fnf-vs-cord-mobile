@@ -20,10 +20,14 @@ class CopyrightState extends MusicBeatState
 		// no need to replace the scalemode instance just change its fill mode
 		@:privateAccess
 		(cast FlxG.scaleMode : RatioScaleMode).fillScreen = true;
+		#if mobile
+		@:privateAccess
+		(cast FlxG.scaleMode : RatioScaleMode).fillScreen = false;
+		#elseif desktop
 		FlxG.resizeWindow(Std.int(FAKE_WIDTH * Native.dpiScale), Native.windowHeight);
 		FlxG.stage.window.resizable = false;
-		
 		CoolUtil.centerWindow();
+		#end
 		
 		var direct = 'Hey!\n\n\nThis Mod contains slight copyrighted audio in some sections.\n\n\nWould you like to turn on Streamer Mode?\n(This option can be disabled in settings later)';
 		

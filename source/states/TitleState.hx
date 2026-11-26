@@ -10,6 +10,7 @@ import flixel.effects.FlxFlicker;
 import objects.Bopper;
 
 import states.MainMenuState;
+import backend.Localization;
 
 class TitleState extends MusicBeatState
 {
@@ -22,6 +23,7 @@ class TitleState extends MusicBeatState
 	static var FAKE_WIDTH(get, never):Int;
 	
 	var pStart:FlxText;
+	var startPrompt:String;
 	
 	override public function create():Void
 	{
@@ -53,10 +55,14 @@ class TitleState extends MusicBeatState
 		// no need to replace the scalemode instance just change its fill mode
 		@:privateAccess
 		(cast FlxG.scaleMode : RatioScaleMode).fillScreen = true;
+		#if mobile
+		@:privateAccess
+		(cast FlxG.scaleMode : RatioScaleMode).fillScreen = false;
+		#elseif desktop
 		FlxG.resizeWindow(FAKE_WIDTH, backend.Native.windowHeight);
 		FlxG.stage.window.resizable = false;
-		
 		CoolUtil.centerWindow();
+		#end
 		
 		persistentUpdate = true;
 		
@@ -72,7 +78,12 @@ class TitleState extends MusicBeatState
 		
 		pStart = new FlxText(0, 0, FlxG.width, '', 20);
 		pStart.setFormat(Paths.font('title.ttf'), 20, FlxColor.WHITE, CENTER);
-		pStart.text = 'PRESS START';
+		#if mobile
+		startPrompt = Localization.text('TAP TO START');
+		#else
+		startPrompt = Localization.text('PRESS START');
+		#end
+		pStart.text = startPrompt;
 		pStart.screenCenter(Y);
 		pStart.y += 150;
 		add(pStart);
@@ -93,10 +104,20 @@ class TitleState extends MusicBeatState
 		if (((timer % blinkRate) / blinkRate > 0.5) != previousBlink)
 		{
 			previousBlink = !previousBlink;
-			pStart.text = previousBlink ? '> PRESS START <' : 'PRESS START';
+			pStart.text = previousBlink ? '> ' + startPrompt + ' <' : startPrompt;
 		}
 		
-		if (controls.ACCEPT && can)
+		var tapped = false;
+		#if mobile
+		for (touch in FlxG.touches.list)
+			if (touch.justPressed)
+			{
+				tapped = true;
+				break;
+			}
+		#end
+
+		if ((controls.ACCEPT || tapped) && can)
 		{
 			can = false;
 			FlxG.sound.play(Paths.sound('main/select'));

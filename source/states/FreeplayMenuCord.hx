@@ -21,6 +21,9 @@ import objects.FlxTextTyper;
 import backend.WeekData;
 import backend.Highscore;
 import backend.Song;
+import backend.Localization;
+import backend.MobileVirtualPad;
+import backend.MobileVirtualPad.MobilePadLayout;
 
 import shaders.ColorSwap;
 
@@ -49,6 +52,9 @@ class FreeplayMenuCord extends MusicBeatState
 	var freeplayInstance:FreeplayInteraction = null;
 	
 	public var muffledMusic:FlxSound;
+	#if mobile
+	var mobilePad:MobileVirtualPad;
+	#end
 	
 	override function create()
 	{
@@ -205,13 +211,29 @@ class FreeplayMenuCord extends MusicBeatState
 			}
 			add(freeplayInstance = new FreeplayInteraction(firstTime));
 		});
+
+		#if mobile
+		mobilePad = new MobileVirtualPad(MobilePadLayout.MENU);
+		add(mobilePad);
+		#end
 	}
 	
 	var camFollowDivision:Float = 80;
 	
 	override function update(elapsed:Float)
 	{
+		#if mobile
+		mobilePad.updateInput();
+		#end
 		super.update(elapsed);
+	}
+
+	override function destroy()
+	{
+		#if mobile
+		mobilePad?.clearInput();
+		#end
+		super.destroy();
 	}
 	
 	public function playMelAnim(anim:String)
@@ -709,11 +731,16 @@ class FreeplayInteraction extends FlxTypedContainer<FlxBasic>
 	
 	function getRandomDialogue(directory:String)
 	{
-		if (FileSystem.exists(Paths.getPath('data/freeplay/$directory'))
-			&& FileSystem.isDirectory(Paths.getPath('data/freeplay/$directory')))
+		final directoryPath = Paths.getPath('data/freeplay/$directory');
+		if (FileSystem.exists(directoryPath) && FileSystem.isDirectory(directoryPath))
 		{
-			final dialogueToRead = Path.withoutExtension(FlxG.random.getObject(FileSystem.readDirectory(Paths.getPath('data/freeplay/$directory'))));
-			return 'freeplay/$directory/$dialogueToRead';
+			final dialogueFiles = FileSystem.readDirectory(directoryPath).filter(entry ->
+				Path.extension(entry).toLowerCase() == 'json' && !FileSystem.isDirectory(Path.join([directoryPath, entry])));
+			if (dialogueFiles.length > 0)
+			{
+				final dialogueToRead = Path.withoutExtension(FlxG.random.getObject(dialogueFiles));
+				return 'freeplay/$directory/$dialogueToRead';
+			}
 		}
 		
 		return '';
@@ -915,8 +942,10 @@ class DialogueFreeplay extends FlxSprite
 		}
 		reminderText.update(elapsed);
 		
-		reminderText.text = 'Press ' + (Controls.instance.controllerMode ? (Controls.isPsController() ? 'SQUARE' : 'X') : 'T') + ' to interact';
-		infoText.text = 'Press ' + (Controls.instance.controllerMode ? (Controls.isPsController() ? 'SQUARE' : 'X') : 'T') + ' to interact';
+		final interactKey = Controls.instance.controllerMode ? (Controls.isPsController() ? 'SQUARE' : 'X') : 'T';
+		final interactPrompt = Localization.text('Press ') + interactKey + Localization.text(' to interact');
+		reminderText.text = interactPrompt;
+		infoText.text = interactPrompt;
 		
 		final textScale = Controls.instance.controllerMode && Controls.isPsController() ? 0.7 : 1;
 		reminderText.scale.set(textScale, 1);
@@ -1037,7 +1066,7 @@ class DialogueFreeplay extends FlxSprite
 	inline function loadDialogue(filePath:String)
 	{
 		//
-		var formatted = Paths.json(filePath);
+		var formatted = Localization.localizedPath(Paths.json(filePath));
 		
 		if (FileSystem.exists(formatted))
 		{

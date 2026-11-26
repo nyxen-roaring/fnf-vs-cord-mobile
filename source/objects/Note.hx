@@ -515,7 +515,9 @@ class Note extends FlxSprite
 		if (copyAngle)
 			angle = strumDirection - 90 + strumAngle + offsetAngle;
 
-		if (copyAlpha)
+		if (!mustPress && !ClientPrefs.data.opponentStrums)
+			alpha = 0;
+		else if (copyAlpha)
 			alpha = strumAlpha * multAlpha;
 
 		if (copyX)

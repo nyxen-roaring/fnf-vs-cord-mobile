@@ -11,6 +11,9 @@ import objects.AttachedText;
 import options.Option;
 
 import backend.InputFormatter;
+import backend.Localization;
+import backend.MobileVirtualPad;
+import backend.MobileVirtualPad.MobilePadLayout;
 
 // kinda poorly done but its quick and works
 class BaseOptionsMenu extends MusicBeatSubstate
@@ -25,6 +28,9 @@ class BaseOptionsMenu extends MusicBeatSubstate
 	
 	public var title:String;
 	public var rpcTitle:String;
+	#if mobile
+	var mobilePad:MobileVirtualPad;
+	#end
 	
 	var selectorBG:FlxSprite;
 	
@@ -52,13 +58,13 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		checkboxGroup = new FlxTypedGroup<OptionsText>();
 		add(checkboxGroup);
 		
-		var titleText = new OptionsText(OptionsState.X_PADDING, OptionsState.Y_PADDING * 3, 0, title);
+		var titleText = new OptionsText(OptionsState.X_PADDING, OptionsState.Y_PADDING * 3, 0, Localization.text(title));
 		add(titleText);
 		
 		var _reference:Null<OptionsText> = null;
 		for (i in 0...optionsArray.length)
 		{
-			var optionText:OptionsText = new OptionsText((OptionsState.X_PADDING * 2) + 4, OptionsState.Y_PADDING * 4, 0, optionsArray[i].name);
+			var optionText:OptionsText = new OptionsText((OptionsState.X_PADDING * 2) + 4, OptionsState.Y_PADDING * 4, 0, Localization.text(optionsArray[i].name));
 			grpOptions.add(optionText);
 			
 			if (_reference != null)
@@ -69,7 +75,7 @@ class BaseOptionsMenu extends MusicBeatSubstate
 			
 			if (optionsArray[i].type == 'bool')
 			{
-				var checkbox:OptionsText = new OptionsText(optionText.x - 105, optionText.y, 0, Std.string(optionsArray[i].getValue()) == 'true' ? 'On' : 'Off');
+				var checkbox:OptionsText = new OptionsText(optionText.x - 105, optionText.y, 0, Std.string(optionsArray[i].getValue()) == 'true' ? Localization.text('On') : Localization.text('Off'));
 				checkbox.parent = optionText;
 				checkbox.offset.x = -450;
 				checkbox.ID = i;
@@ -92,6 +98,11 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		
 		changeSelection();
 		reloadCheckboxes();
+
+		#if mobile
+		mobilePad = new MobileVirtualPad(MobilePadLayout.MENU);
+		add(mobilePad);
+		#end
 	}
 	
 	public function addOption(option:Option)
@@ -113,6 +124,9 @@ class BaseOptionsMenu extends MusicBeatSubstate
 	
 	override function update(elapsed:Float)
 	{
+		#if mobile
+		mobilePad.updateInput();
+		#end
 		super.update(elapsed);
 		
 		if (bindingKey)
@@ -169,11 +183,11 @@ class BaseOptionsMenu extends MusicBeatSubstate
 						FlxTween.tween(bindingBlack, {alpha: 0.6}, 0.35, {ease: FlxEase.linear});
 						add(bindingBlack);
 						
-						bindingText = new Alphabet(FlxG.width / 2, 160, "Rebinding " + curOption.name, false);
+						bindingText = new Alphabet(FlxG.width / 2, 160, Localization.text('Rebinding ') + Localization.text(curOption.name), false);
 						bindingText.alignment = CENTERED;
 						add(bindingText);
 						
-						bindingText2 = new Alphabet(FlxG.width / 2, 340, "Hold ESC to Cancel\nHold Backspace to Delete", true);
+						bindingText2 = new Alphabet(FlxG.width / 2, 340, Localization.text("Hold ESC to Cancel\nHold Backspace to Delete"), true);
 						bindingText2.alignment = CENTERED;
 						add(bindingText2);
 						
@@ -476,7 +490,7 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		var val:Dynamic = option.getValue();
 		if (option.type == 'percent') val *= 100;
 		var def:Dynamic = option.defaultValue;
-		option.text = text.replace('%v', val).replace('%d', def);
+		option.text = text.replace('%v', Localization.text(Std.string(val))).replace('%d', def);
 	}
 	
 	function changeSelection(change:Int = 0)
@@ -498,7 +512,7 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		
 		if (change != 0) FlxG.sound.play(Paths.sound('settingsScroll'));
 		
-		(cast FlxG.state : OptionsState).description.typer.startTyping('Description: ' + optionsArray[curSelected].description);
+		(cast FlxG.state : OptionsState).description.typer.startTyping(Localization.text('Description: ') + Localization.text(optionsArray[curSelected].description));
 	}
 	
 	function updateSelectorSize()
@@ -533,5 +547,13 @@ class BaseOptionsMenu extends MusicBeatSubstate
 	}
 	
 	function reloadCheckboxes() for (checkbox in checkboxGroup)
-		checkbox.text = (Std.string(optionsArray[checkbox.ID].getValue()) == 'true') ? 'On' : 'Off'; // Do not take off the Std.string() from this, it will break a thing in Mod Settings Menu
+		checkbox.text = (Std.string(optionsArray[checkbox.ID].getValue()) == 'true') ? Localization.text('On') : Localization.text('Off'); // Do not take off the Std.string() from this, it will break a thing in Mod Settings Menu
+
+	override function destroy()
+	{
+		#if mobile
+		mobilePad?.clearInput();
+		#end
+		super.destroy();
+	}
 }

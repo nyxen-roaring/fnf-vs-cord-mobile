@@ -3,6 +3,8 @@ package states;
 import backend.WeekData;
 import backend.Highscore;
 import backend.Song;
+import backend.MobileVirtualPad;
+import backend.MobileVirtualPad.MobilePadLayout;
 
 import objects.HealthIcon;
 import objects.MusicPlayer;
@@ -50,6 +52,9 @@ class FreeplayState extends MusicBeatState
 	var bottomBG:FlxSprite;
 	
 	var player:MusicPlayer;
+	#if mobile
+	var mobilePad:MobileVirtualPad;
+	#end
 	
 	override function create()
 	{
@@ -178,8 +183,13 @@ class FreeplayState extends MusicBeatState
 		super.create();
 		
 		MusicBeatState.currentTransition = SWIPE;
+
+		#if mobile
+		mobilePad = new MobileVirtualPad(MobilePadLayout.MENU);
+		add(mobilePad);
+		#end
 	}
-	
+
 	override function closeSubState()
 	{
 		changeSelection(0, false);
@@ -208,6 +218,10 @@ class FreeplayState extends MusicBeatState
 	
 	override function update(elapsed:Float)
 	{
+		#if mobile
+		mobilePad.updateInput();
+		#end
+
 		if (FlxG.sound.music.volume < 0.7)
 		{
 			FlxG.sound.music.volume += 0.5 * FlxG.elapsed;
@@ -571,6 +585,9 @@ class FreeplayState extends MusicBeatState
 	
 	override function destroy():Void
 	{
+		#if mobile
+		mobilePad?.clearInput();
+		#end
 		super.destroy();
 		
 		FlxG.autoPause = ClientPrefs.data.autoPause;

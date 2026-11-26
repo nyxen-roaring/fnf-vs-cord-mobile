@@ -17,7 +17,7 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		var option:Option = new Option('Middlescroll', 'If checked, your notes get centered.', 'middleScroll', 'bool');
 		addOption(option);
 		
-		var option:Option = new Option('Opponent Notes', 'If unchecked, opponent notes get hidden.', 'opponentStrums', 'bool');
+		var option:Option = new Option('Opponent Notes', 'Show opponent notes and receptors. If unchecked, both are hidden in every scroll mode.', 'opponentStrums', 'bool');
 		addOption(option);
 		
 		var option:Option = new Option('Ghost Tapping', "If checked, you won't get misses from pressing keys\nwhile there are no notes able to be hit.", 'ghostTapping', 'bool');

@@ -9,6 +9,7 @@ import extensions.flixel.FlxUniformSprite;
 import objects.FlxTextTyper;
 
 import cutscenes.DialogueCharacter;
+import backend.Localization;
 
 import flixel.system.FlxAssets.FlxSoundAsset;
 
@@ -315,6 +316,7 @@ class DialogueBoxPsych extends FlxSpriteGroup
 	
 	public static function parseDialogue(path:String):DialogueFile
 	{
+		path = Localization.localizedPath(path);
 		#if MODS_ALLOWED
 		if (FileSystem.exists(path))
 		{

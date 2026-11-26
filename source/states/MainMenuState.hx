@@ -1,6 +1,8 @@
 package states;
 
 import backend.TurboControl;
+import backend.MobileVirtualPad;
+import backend.MobileVirtualPad.MobilePadLayout;
 
 import objects.OffsetSprite;
 
@@ -53,6 +55,9 @@ class MainMenuState extends MusicBeatState
 	
 	var turboDown = TurboControl.fromControl('ui_down');
 	var turboUp = TurboControl.fromControl('ui_up');
+	#if mobile
+	var mobilePad:MobileVirtualPad;
+	#end
 	
 	override function create()
 	{
@@ -156,6 +161,7 @@ class MainMenuState extends MusicBeatState
 			seenIntro = true;
 			intro();
 			
+			#if desktop
 			FlxTween.tween(FlxG.stage.window, {width: backend.Native.windowWidth}, 0.7,
 				{
 					startDelay: 0.3,
@@ -170,6 +176,10 @@ class MainMenuState extends MusicBeatState
 						CoolUtil.centerWindow();
 					}
 				});
+			#elseif mobile
+			@:privateAccess
+			(cast FlxG.scaleMode : flixel.system.scaleModes.RatioScaleMode).fillScreen = false;
+			#end
 				
 			updateTextPos(true);
 		}
@@ -212,6 +222,11 @@ class MainMenuState extends MusicBeatState
 		var leDate = Date.now();
 		if (leDate.getDay() == 5 && leDate.getHours() >= 18) Achievements.unlock('friday');
 		#end
+
+		#if mobile
+		mobilePad = new MobileVirtualPad(MobilePadLayout.MENU);
+		add(mobilePad);
+		#end
 	}
 	
 	function slideCamera(into:Bool)
@@ -222,6 +237,10 @@ class MainMenuState extends MusicBeatState
 	
 	override function update(elapsed:Float)
 	{
+		#if mobile
+		mobilePad.updateInput();
+		#end
+
 		if (canSelect)
 		{
 			if (turboUp.PRESSED || turboDown.PRESSED) changeSelection(controls.UI_DOWN ? 1 : -1);
@@ -234,6 +253,14 @@ class MainMenuState extends MusicBeatState
 		}
 		
 		super.update(elapsed);
+	}
+
+	override function destroy()
+	{
+		#if mobile
+		mobilePad?.clearInput();
+		#end
+		super.destroy();
 	}
 	
 	function intro()

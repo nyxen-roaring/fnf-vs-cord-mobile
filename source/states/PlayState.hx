@@ -264,9 +264,9 @@ class PlayState extends MusicBeatState
 	public var opponentCameraOffset:Array<Float> = null;
 	public var girlfriendCameraOffset:Array<Float> = null;
 	
-	#if desktop
 	// Discord RPC variables
 	var storyDifficultyText:String = "";
+	#if desktop
 	var detailsText:String = "";
 	var detailsPausedText:String = "";
 	#end
@@ -297,6 +297,12 @@ class PlayState extends MusicBeatState
 	
 	var noteUnderlay:FlxSprite;
 	
+	#if mobile
+	private var mobileHitboxGroup:FlxTypedGroup<FlxSprite>;
+	private var mobileTouchLanes:Map<Int, Int> = new Map<Int, Int>();
+	private var mobileTouchCounts:Array<Int> = [0, 0, 0, 0];
+	#end
+
 	override public function create()
 	{
 		// trace('Playback Rate: ' + playbackRate);
@@ -441,7 +447,9 @@ class PlayState extends MusicBeatState
 			for (file in FileSystem.readDirectory(folder))
 			{
 				if (file.toLowerCase().endsWith('.lua')) new FunkinLua(folder + file);
+				#if HSCRIPT_ALLOWED
 				if (file.toLowerCase().endsWith('.hx')) initHScript(folder + file);
+				#end
 			}
 		#end
 		
@@ -495,6 +503,13 @@ class PlayState extends MusicBeatState
 		uiGroup = new FlxSpriteGroup();
 		add(uiGroup);
 		
+		#if mobile
+		mobileHitboxGroup = new FlxTypedGroup<FlxSprite>();
+		mobileHitboxGroup.cameras = [camHUD];
+		add(mobileHitboxGroup);
+		createMobileHitboxes();
+		#end
+
 		Conductor.songPosition = -5000 / Conductor.songPosition;
 		var showTime:Bool = (ClientPrefs.data.timeBarType != 'Disabled');
 		timeTxt = new FlxText(STRUM_X + (FlxG.width / 2) - 248, 19, 400, "", 32);
@@ -623,7 +638,9 @@ class PlayState extends MusicBeatState
 			for (file in FileSystem.readDirectory(folder))
 			{
 				if (file.toLowerCase().endsWith('.lua')) new FunkinLua(folder + file);
+				#if HSCRIPT_ALLOWED
 				if (file.toLowerCase().endsWith('.hx')) initHScript(folder + file);
+				#end
 			}
 		#end
 		
@@ -1753,6 +1770,10 @@ class PlayState extends MusicBeatState
 		
 		super.update(elapsed);
 		
+		#if mobile
+		updateMobileTouches();
+		#end
+
 		setOnScripts('curDecStep', curDecStep);
 		setOnScripts('curDecBeat', curDecBeat);
 		
@@ -1970,6 +1991,10 @@ class PlayState extends MusicBeatState
 	
 	function openPauseMenu()
 	{
+		#if mobile
+		clearMobileTouchState();
+		#end
+
 		FlxG.camera.followLerp = 0; // FUCK. YOU.
 		persistentUpdate = false;
 		persistentDraw = true;
@@ -2878,7 +2903,13 @@ class PlayState extends MusicBeatState
 			@:privateAccess if (!FlxG.keys._keyListMap.exists(eventKey)) return;
 			#end
 			
-			if (FlxG.keys.checkStatus(eventKey, JUST_PRESSED)) keyPressed(key);
+			if (FlxG.keys.checkStatus(eventKey, JUST_PRESSED))
+			{
+				#if mobile
+				if (!isMobileLaneHeld(key))
+				#end
+					keyPressed(key);
+			}
 		}
 	}
 	
@@ -2964,7 +2995,13 @@ class PlayState extends MusicBeatState
 	{
 		var eventKey:FlxKey = event.keyCode;
 		var key:Int = getKeyFromEvent(keysArray, eventKey);
-		if (!controls.controllerMode && key > -1) keyReleased(key);
+		if (!controls.controllerMode && key > -1)
+		{
+			#if mobile
+			if (isMobileLaneHeld(key)) return;
+			#end
+			keyReleased(key);
+		}
 	}
 	
 	private function keyReleased(key:Int)
@@ -3002,9 +3039,14 @@ class PlayState extends MusicBeatState
 		var holdArray:Array<Bool> = [];
 		var pressArray:Array<Bool> = [];
 		var releaseArray:Array<Bool> = [];
-		for (key in keysArray)
+		for (i in 0...keysArray.length)
 		{
-			holdArray.push(controls.pressed(key));
+			var key = keysArray[i];
+			var isHeld = controls.pressed(key);
+			#if mobile
+			isHeld = isHeld || mobileTouchCounts[i] > 0;
+			#end
+			holdArray.push(isHeld);
 			if (controls.controllerMode)
 			{
 				pressArray.push(controls.justPressed(key));
@@ -3014,7 +3056,13 @@ class PlayState extends MusicBeatState
 		
 		// TO DO: Find a better way to handle controller inputs, this should work for now
 		if (controls.controllerMode && pressArray.contains(true)) for (i in 0...pressArray.length)
-			if (pressArray[i] && strumsBlocked[i] != true) keyPressed(i);
+			if (pressArray[i] && strumsBlocked[i] != true)
+			{
+				#if mobile
+				if (isMobileLaneHeld(i)) continue;
+				#end
+				keyPressed(i);
+			}
 			
 		if (startedCountdown && !boyfriend.stunned && generatedMusic)
 		{
@@ -3044,9 +3092,106 @@ class PlayState extends MusicBeatState
 		
 		// TO DO: Find a better way to handle controller inputs, this should work for now
 		if ((controls.controllerMode || strumsBlocked.contains(true)) && releaseArray.contains(true)) for (i in 0...releaseArray.length)
-			if (releaseArray[i] || strumsBlocked[i] == true) keyReleased(i);
+			if (releaseArray[i] || strumsBlocked[i] == true)
+			{
+				#if mobile
+				if (isMobileLaneHeld(i)) continue;
+				#end
+				keyReleased(i);
+			}
+	}
+
+	#if mobile
+	private function createMobileHitboxes():Void
+	{
+		final hitboxY:Int = Std.int(FlxG.height * 0.66);
+		final hitboxHeight:Int = FlxG.height - hitboxY;
+		final laneColors:Array<Int> = [0xFFC24B99, 0xFF00FFFF, 0xFF12FA05, 0xFFF9393F];
+
+		for (lane in 0...4)
+		{
+			final left:Int = Std.int(lane * FlxG.width / 4);
+			final right:Int = Std.int((lane + 1) * FlxG.width / 4);
+			final hitbox = new FlxSprite(left, hitboxY).makeGraphic(right - left, hitboxHeight, laneColors[lane]);
+			hitbox.scrollFactor.set();
+			hitbox.alpha = ClientPrefs.data.mobileHitboxes ? 0.3 : 0;
+			hitbox.antialiasing = false;
+			mobileHitboxGroup.add(hitbox);
+		}
+	}
+
+	private function updateMobileTouches():Void
+	{
+		if (paused || inCutscene || endingSong || cpuControlled)
+		{
+			clearMobileTouchState();
+			return;
+		}
+
+		for (touch in FlxG.touches.list)
+		{
+			if (touch.justReleased)
+			{
+				mobileTouchLanes.remove(touch.touchPointID);
+			}
+			else if (touch.justPressed)
+			{
+				final lane = getMobileTouchLane(touch.gameX, touch.gameY);
+				if (lane >= 0) mobileTouchLanes.set(touch.touchPointID, lane);
+			}
+		}
+
+		final staleTouchIds:Array<Int> = [];
+		for (touchId in mobileTouchLanes.keys())
+			if (FlxG.touches.getByID(touchId) == null) staleTouchIds.push(touchId);
+		for (touchId in staleTouchIds) mobileTouchLanes.remove(touchId);
+
+		final nextCounts:Array<Int> = [0, 0, 0, 0];
+		for (lane in mobileTouchLanes) nextCounts[lane]++;
+
+		for (lane in 0...4)
+		{
+			final wasHeld = mobileTouchCounts[lane] > 0;
+			final isHeld = nextCounts[lane] > 0;
+			mobileTouchCounts[lane] = nextCounts[lane];
+
+			if (!wasHeld && isHeld && !controls.pressed(keysArray[lane]))
+				keyPressed(lane);
+			else if (wasHeld && !isHeld && !controls.pressed(keysArray[lane]))
+				keyReleased(lane);
+
+			final hitbox = mobileHitboxGroup.members[lane];
+			if (hitbox != null)
+				hitbox.alpha = !ClientPrefs.data.mobileHitboxes ? 0 : (isHeld ? 0.55 : 0.3);
+		}
 	}
 	
+	private function clearMobileTouchState():Void
+	{
+		mobileTouchLanes = new Map<Int, Int>();
+		for (lane in 0...4)
+		{
+			if (mobileTouchCounts[lane] > 0 && !controls.pressed(keysArray[lane]))
+				keyReleased(lane);
+			mobileTouchCounts[lane] = 0;
+
+			final hitbox = mobileHitboxGroup.members[lane];
+			if (hitbox != null) hitbox.alpha = ClientPrefs.data.mobileHitboxes ? 0.3 : 0;
+		}
+	}
+
+	private inline function getMobileTouchLane(x:Float, y:Float):Int
+	{
+		if (x < 0 || x >= FlxG.width || y < FlxG.height * 0.66 || y >= FlxG.height) return -1;
+		return Std.int(x * 4 / FlxG.width);
+	}
+
+	private inline function isMobileLaneHeld(lane:Int):Bool
+	{
+		return lane >= 0 && lane < mobileTouchCounts.length && mobileTouchCounts[lane] > 0;
+	}
+	#end
+
 	function noteMiss(daNote:Note):Void
 	{ // You didn't hit the key and let it go offscreen, also used by Hurt Notes
 		// Dupe note remove
@@ -3382,6 +3527,10 @@ class PlayState extends MusicBeatState
 	
 	override function destroy()
 	{
+		#if mobile
+		clearMobileTouchState();
+		#end
+
 		#if LUA_ALLOWED
 		for (lua in luaArray)
 		{

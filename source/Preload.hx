@@ -83,12 +83,18 @@ class Preload extends MusicBeatState
 		Mods.loadTopMod();
 		
 		@:privateAccess
+		(cast FlxG.scaleMode : RatioScaleMode).fillScreen = true;
+		#if mobile
+		@:privateAccess
+		(cast FlxG.scaleMode : RatioScaleMode).fillScreen = false;
+		#elseif desktop
+		@:privateAccess
 		{
-			(cast FlxG.scaleMode : RatioScaleMode).fillScreen = true;
 			FlxG.resizeWindow(TitleState.FAKE_WIDTH, backend.Native.windowHeight);
 			FlxG.stage.window.resizable = false;
 			CoolUtil.centerWindow();
 		}
+		#end
 		
 		sticker = new FlxSprite();
 		sticker.frames = Paths.getAtlas('stickers/1');

@@ -1,0 +1,76 @@
+name: Android APK
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-android:
+    name: Build Android APK
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Haxe
+        uses: krdlab/setup-haxe@v2
+        with:
+          haxe-version: 4.3.7
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Install Android build tools
+        run: |
+          sdkmanager "platforms;android-33" "build-tools;33.0.2" "ndk;21.4.7075529"
+
+      - name: Install Haxe dependencies
+        run: |
+          haxelib install hxpkg
+          haxelib run hxpkg install
+
+      - name: Configure Lime for Android
+        run: |
+          haxelib run lime config ANDROID_SDK "$ANDROID_SDK_ROOT"
+          haxelib run lime config ANDROID_NDK_ROOT "$ANDROID_SDK_ROOT/ndk/21.4.7075529"
+          haxelib run lime config JAVA_HOME "$JAVA_HOME"
+          haxelib run lime setup android
+
+      - name: Build debug APK
+        env:
+          GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx4g
+        run: haxelib run lime build android -debug
+
+      - name: Stage APK artifact
+        run: |
+          apk_path="$(find export -type f -name '*.apk' -print -quit)"
+          if [ -z "$apk_path" ]; then
+            echo "Android build completed without producing an APK."
+            exit 1
+          fi
+          mkdir -p dist
+          cp "$apk_path" dist/Vs-Cord-debug.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: vs-cord-android-debug
+          path: dist/Vs-Cord-debug.apk
+          if-no-files-found: error
+          retention-days: 14

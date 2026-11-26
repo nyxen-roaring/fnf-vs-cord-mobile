@@ -6,6 +6,7 @@ class TurboControl extends FlxBasic
 {
 	public var buttons:Null<Array<Int>> = null;
 	public var keys:Array<Int>;
+	public var action:Null<String> = null;
 	public var rate:Float = 0.1;
 	public var initialDelay:Float = 0.5;
 	
@@ -24,7 +25,7 @@ class TurboControl extends FlxBasic
 	{
 		super.update(elapsed);
 		
-		var isPressing = false;
+		var isPressing = action != null && Controls.instance != null && Controls.instance.pressed(action);
 		if (buttons != null)
 		{
 			for (button in buttons)
@@ -37,7 +38,7 @@ class TurboControl extends FlxBasic
 			}
 		}
 		
-		if (!isPressing) isPressing = FlxG.keys.anyPressed(keys);
+		if (!isPressing && action == null) isPressing = FlxG.keys.anyPressed(keys);
 		
 		if (isPressing)
 		{
@@ -79,6 +80,7 @@ class TurboControl extends FlxBasic
 		var instance = new TurboControl(keys, rate);
 		
 		instance.buttons = ClientPrefs.gamepadBinds.get(action);
+		instance.action = action;
 		
 		return instance;
 	}
