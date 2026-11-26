@@ -17,6 +17,9 @@ import states.MainMenuState;
 import options.OptionsText;
 
 import backend.StageData;
+import backend.Localization;
+import backend.MobileVirtualPad;
+import backend.MobileVirtualPad.MobilePadLayout;
 
 class OptionsState extends MusicBeatState
 {
@@ -40,6 +43,10 @@ class OptionsState extends MusicBeatState
 		{
 			t: 'Controls',
 			d: 'Change your controls.'
+		},
+		{
+			t: 'Language',
+			d: 'Choose the game language. Translated dialogue loads when a matching language file exists.'
 		},
 		{
 			t: 'Adjust Delay and Combo',
@@ -88,6 +95,9 @@ class OptionsState extends MusicBeatState
 	var bottom:FlxTypedContainer<FlxBasic>;
 	
 	var selectorBG:FlxSprite;
+	#if mobile
+	var mobilePad:MobileVirtualPad;
+	#end
 	
 	public var description:OptionsText;
 	
@@ -97,6 +107,8 @@ class OptionsState extends MusicBeatState
 		{
 			case 'Controls':
 				openSubState(new options.ControlsSubState());
+			case 'Language':
+				openSubState(new options.LanguageSettingsSubState());
 			case 'Graphics':
 				openSubState(new options.GraphicsSettingsSubState());
 			case 'Visuals and UI':
@@ -146,7 +158,8 @@ class OptionsState extends MusicBeatState
 		for (k => i in options)
 		{
 			if (OptionsState.onPlayState && (i.optionsOnly == true)) continue;
-			final spr = new OptionsText((X_PADDING * 2) + 4, Y_PADDING * 4, FlxG.width, i.t);
+			final spr = new OptionsText((X_PADDING * 2) + 4, Y_PADDING * 4, FlxG.width, Localization.text(i.t));
+			spr.ID = k;
 			spr.visible = false;
 			
 			if (_reference != null)
@@ -170,11 +183,11 @@ class OptionsState extends MusicBeatState
 		bg.updateHitbox();
 		bottom.add(bg);
 		
-		final txtL = new OptionsText(X_PADDING, bg.y + (bg.height - 22) / 2, FlxG.width, 'ENTER=Choose');
+		final txtL = new OptionsText(X_PADDING, bg.y + (bg.height - 22) / 2, FlxG.width, Localization.text('ENTER=Choose'));
 		txtL.color = FlxColor.BLACK;
 		bottom.add(txtL);
 		
-		final txtR = new OptionsText(X_PADDING, bg.y + (bg.height - 22) / 2, FlxG.width - (X_PADDING * 2), 'ESC=Cancel');
+		final txtR = new OptionsText(X_PADDING, bg.y + (bg.height - 22) / 2, FlxG.width - (X_PADDING * 2), Localization.text('ESC=Cancel'));
 		txtR.alignment = RIGHT;
 		txtR.color = FlxColor.BLACK;
 		bottom.add(txtR);
@@ -183,7 +196,7 @@ class OptionsState extends MusicBeatState
 		add(description);
 		
 		FlxTimer.wait(#if !debug 1 #else 0 #end, () -> {
-			topTxt.typer.startTyping('Choose Advanced Options for: Vs Cord\nUse the up and down arrow keys to move the highlight to your choice.');
+			topTxt.typer.startTyping(Localization.text('Choose Advanced Options for: Vs Cord\nUse the up and down arrow keys to move the highlight to your choice.'));
 		});
 		
 		topTxt.typer.onTypingComplete.addOnce(() -> typeAll());
@@ -193,6 +206,11 @@ class OptionsState extends MusicBeatState
 		CoolUtil.setTransitionSkip(true, true);
 		
 		super.create();
+
+		#if mobile
+		mobilePad = new MobileVirtualPad(MobilePadLayout.MENU);
+		add(mobilePad);
+		#end
 	}
 	
 	function typeAll(customRate:Float = 1)
@@ -228,6 +246,9 @@ class OptionsState extends MusicBeatState
 		if (!grpOptions.visible)
 		{
 			canInteract = false;
+			for (item in grpOptions.members)
+				if (item != null && item.ID >= 0 && item.ID < options.length)
+					item.text = Localization.text(options[item.ID].t);
 			typeAll(2);
 			
 			selectorBG.x = -9999; // abit cheap but it does the job
@@ -240,6 +261,11 @@ class OptionsState extends MusicBeatState
 	
 	override function update(elapsed:Float)
 	{
+		#if mobile
+		mobilePad.visible = subState == null;
+		if (subState == null) mobilePad.updateInput();
+		else mobilePad.clearInput();
+		#end
 		super.update(elapsed);
 		
 		if (canInteract && grpOptions.visible)
@@ -292,7 +318,7 @@ class OptionsState extends MusicBeatState
 		selectorBG.x = cur.x - 4 - X_PADDING;
 		selectorBG.y = cur.y + -2 + (cur.height - selectorBG.height) / 2;
 		
-		description.typer.startTyping('Description: ' + options[curSelected].d);
+		description.typer.startTyping(Localization.text('Description: ') + Localization.text(options[curSelected].d));
 		
 		// trace(cur.textField.textWidth);
 		// trace(cur.width);
@@ -300,6 +326,9 @@ class OptionsState extends MusicBeatState
 	
 	override function destroy()
 	{
+		#if mobile
+		mobilePad?.clearInput();
+		#end
 		ClientPrefs.loadPrefs();
 		super.destroy();
 	}

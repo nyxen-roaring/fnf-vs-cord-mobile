@@ -19,6 +19,8 @@ import flixel.FlxG;
 import flixel.util.FlxDirectionFlags;
 
 import backend.MusicBeatState;
+import backend.MobileVirtualPad;
+import backend.MobileVirtualPad.MobilePadLayout;
 
 import states.credits.objects.Tree;
 import states.credits.objects.Door;
@@ -138,6 +140,9 @@ class CreditsPlatformer extends MusicBeatState
 	
 	var player:CordPlayer;
 	var floor:FlxSprite;
+	#if mobile
+	var mobilePad:MobileVirtualPad;
+	#end
 	
 	var entrance_door:Door;
 	var exit_door:Door;
@@ -161,6 +166,9 @@ class CreditsPlatformer extends MusicBeatState
 	
 	override function destroy()
 	{
+		#if mobile
+		mobilePad?.clearInput();
+		#end
 		portalAmbience?.destroy();
 		starAmbience?.destroy();
 		windAmbience?.destroy();
@@ -316,6 +324,11 @@ class CreditsPlatformer extends MusicBeatState
 		add(cord_progress);
 		cord_progress.camera = HUD;
 		cord_progress.antialiasing = ClientPrefs.data.antialiasing;
+
+		#if mobile
+		mobilePad = new MobileVirtualPad(MobilePadLayout.CREDITS, HUD);
+		add(mobilePad);
+		#end
 		
 		MusicBeatState.currentTransition = SWIPE;
 		
@@ -405,6 +418,10 @@ class CreditsPlatformer extends MusicBeatState
 	
 	override function update(elapsed:Float)
 	{
+		#if mobile
+		mobilePad.updateInput();
+		#end
+
 		progress = FlxMath.remapToRange(Math.min(Math.max(player.x, startX), endX), startX, endX, 0, 1);
 		
 		if (progress_bar?.clipRect != null)
@@ -745,17 +762,23 @@ class CordPlayer extends FlxSprite
 			if ((animation.curAnim.name != "idle" && animation.curAnim.name != 'blink') && grounded) animation.play("idle", true);
 		}
 		
-		if ((controls.controllerMode ? controls.pressed('accept') : controls.UI_UP) && grounded)
+		final jumpPressed = (controls.controllerMode && controls.pressed('accept'))
+			|| (!controls.controllerMode && controls.UI_UP)
+			|| controls.mobileActionPressed('accept');
+		if (jumpPressed && grounded)
 		{
 			velocity.y = JUMP_HEIGHT;
 			animation.play('jump', true);
 			grounded = false;
 		}
-		else if ((controls.controllerMode ? controls.justReleased('accept') : controls.UI_UP_R))
+		else if ((controls.controllerMode && controls.justReleased('accept'))
+			|| (!controls.controllerMode && controls.UI_UP_R)
+			|| controls.mobileActionJustReleased('accept'))
 		{
 			velocity.y /= 2;
 		}
 	}
+
 	
 	override function destroy()
 	{

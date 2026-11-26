@@ -109,13 +109,46 @@ class Controls
 	// Gamepad & Keyboard stuff
 	public var keyboardBinds:Map<String, Array<FlxKey>>;
 	public var gamepadBinds:Map<String, Array<FlxGamepadInputID>>;
+	private var mobilePressed:Map<String, Bool> = new Map<String, Bool>();
+	private var mobileJustPressed:Map<String, Bool> = new Map<String, Bool>();
+	private var mobileJustReleased:Map<String, Bool> = new Map<String, Bool>();
+
+	public function beginMobileInputFrame():Void
+	{
+		mobileJustPressed = new Map<String, Bool>();
+		mobileJustReleased = new Map<String, Bool>();
+	}
+
+	public function setMobilePressed(key:String, isPressed:Bool):Void
+	{
+		final wasPressed = mobilePressed.exists(key) && mobilePressed.get(key) == true;
+		if (isPressed && !wasPressed) mobileJustPressed.set(key, true);
+		else if (!isPressed && wasPressed) mobileJustReleased.set(key, true);
+		mobilePressed.set(key, isPressed);
+	}
+
+	public function clearMobileInput():Void
+	{
+		mobilePressed = new Map<String, Bool>();
+		beginMobileInputFrame();
+	}
+
+	public function mobileActionPressed(key:String):Bool
+	{
+		return mobilePressed.exists(key) && mobilePressed.get(key) == true;
+	}
+
+	public function mobileActionJustReleased(key:String):Bool
+	{
+		return mobileJustReleased.exists(key) && mobileJustReleased.get(key) == true;
+	}
 	
 	public function justPressed(key:String)
 	{
 		var result:Bool = (FlxG.keys.anyJustPressed(keyboardBinds[key]) == true);
 		if (result) controllerMode = false;
 		
-		return result || _myGamepadJustPressed(gamepadBinds[key]) == true;
+		return result || (mobileJustPressed.exists(key) && mobileJustPressed.get(key) == true) || _myGamepadJustPressed(gamepadBinds[key]) == true;
 	}
 	
 	public function pressed(key:String)
@@ -123,7 +156,7 @@ class Controls
 		var result:Bool = (FlxG.keys.anyPressed(keyboardBinds[key]) == true);
 		if (result) controllerMode = false;
 		
-		return result || _myGamepadPressed(gamepadBinds[key]) == true;
+		return result || (mobilePressed.exists(key) && mobilePressed.get(key) == true) || _myGamepadPressed(gamepadBinds[key]) == true;
 	}
 	
 	public function justReleased(key:String)
@@ -131,7 +164,7 @@ class Controls
 		var result:Bool = (FlxG.keys.anyJustReleased(keyboardBinds[key]) == true);
 		if (result) controllerMode = false;
 		
-		return result || _myGamepadJustReleased(gamepadBinds[key]) == true;
+		return result || (mobileJustReleased.exists(key) && mobileJustReleased.get(key) == true) || _myGamepadJustReleased(gamepadBinds[key]) == true;
 	}
 	
 	public var controllerMode:Bool = false;

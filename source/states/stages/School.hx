@@ -3,6 +3,7 @@ package states.stages;
 import states.stages.objects.*;
 import substates.GameOverSubstate;
 import cutscenes.DialogueBox;
+import backend.Localization;
 
 import openfl.utils.Assets as OpenFlAssets;
 
@@ -107,7 +108,7 @@ class School extends BaseStage
 	var doof:DialogueBox = null;
 	function initDoof()
 	{
-		var file:String = Paths.txt(songName + '/' + songName + 'Dialogue'); //Checks for vanilla/Senpai dialogue
+		var file:String = Localization.localizedPath(Paths.txt(songName + '/' + songName + 'Dialogue')); //Checks for vanilla/Senpai dialogue
 		#if MODS_ALLOWED
 		if (!FileSystem.exists(file))
 		#else

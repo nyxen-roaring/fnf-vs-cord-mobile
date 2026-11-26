@@ -32,6 +32,11 @@ class VisualsUISubState extends BaseOptionsMenu
 		var option:Option = new Option('Hide HUD', 'If checked, hides most HUD elements.', 'hideHud', 'bool');
 		addOption(option);
 		
+		#if mobile
+		var option:Option = new Option('Mobile Hitboxes', 'Show translucent touch controls during gameplay.', 'mobileHitboxes', 'bool');
+		addOption(option);
+		#end
+
 		var option:Option = new Option('Simplified Score', 'Makes the score less complicated if checked.', 'simplifiedScore', 'bool');
 		addOption(option);
 		

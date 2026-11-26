@@ -65,8 +65,10 @@ enum abstract MenuMusic(String) to String
 	public var currentMenuMusic:MenuMusic = TRACK_01;
 	public var streamerMode:Bool = false;
 	public var shouldPreload:Bool = true;
+	public var language:String = 'English';
 	
 	public var simplifiedScore:Bool = true;
+	public var mobileHitboxes:Bool = true;
 	public var downScroll:Bool = false;
 	public var middleScroll:Bool = false;
 	public var opponentStrums:Bool = true;
