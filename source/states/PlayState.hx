@@ -264,9 +264,9 @@ class PlayState extends MusicBeatState
 	public var opponentCameraOffset:Array<Float> = null;
 	public var girlfriendCameraOffset:Array<Float> = null;
 	
-	#if desktop
 	// Discord RPC variables
 	var storyDifficultyText:String = "";
+	#if desktop
 	var detailsText:String = "";
 	var detailsPausedText:String = "";
 	#end
@@ -447,7 +447,9 @@ class PlayState extends MusicBeatState
 			for (file in FileSystem.readDirectory(folder))
 			{
 				if (file.toLowerCase().endsWith('.lua')) new FunkinLua(folder + file);
+				#if HSCRIPT_ALLOWED
 				if (file.toLowerCase().endsWith('.hx')) initHScript(folder + file);
+				#end
 			}
 		#end
 		
@@ -636,7 +638,9 @@ class PlayState extends MusicBeatState
 			for (file in FileSystem.readDirectory(folder))
 			{
 				if (file.toLowerCase().endsWith('.lua')) new FunkinLua(folder + file);
+				#if HSCRIPT_ALLOWED
 				if (file.toLowerCase().endsWith('.hx')) initHScript(folder + file);
+				#end
 			}
 		#end
 		
